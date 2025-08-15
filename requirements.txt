@@ -1,0 +1,9 @@
+# 备用 pip 依赖文件
+# 如果不使用 conda，可以使用此文件安装依赖
+numpy>=1.21.0
+pandas>=1.3.0
+matplotlib>=3.4.0
+jupyter>=1.0.0
+requests>=2.25.0
+flask>=2.0.0
+fastapi>=0.68.0

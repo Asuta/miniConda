@@ -1,0 +1,15 @@
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9
+  - pip
+  - numpy
+  - pandas
+  - matplotlib
+  - jupyter
+  - requests
+  - pip:
+    - flask
+    - fastapi
+prefix: ./env
