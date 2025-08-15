@@ -4,27 +4,40 @@
 
 ## 环境设置
 
-### 创建环境
+### 创建环境（这个不对）
+
 ```bash
 conda env create -f environment.yml
 ```
 
-### 激活环境
+### 激活环境（这个不对）
+
 ```bash
 conda activate miniConda
 ```
 
+# 使用指定路径创建环境（这个对）
+
+conda env create -f environment.yml -p ./env
+
+# 激活环境（这个对）
+
+conda activate ./env
+
 ### 停用环境
+
 ```bash
 conda deactivate
 ```
 
 ### 删除环境
+
 ```bash
 conda env remove -n miniConda
 ```
 
 ## 项目结构
+
 ```
 miniConda/
 ├── environment.yml     # conda 环境配置文件
