@@ -16,7 +16,7 @@ conda env create -f environment.yml
 conda activate miniConda
 ```
 
-# 使用指定路径创建环境（这个对）
+# 使用指定路径创建环境（这个对）（不用每次都创建  之后只激活就行了（下一步））
 
 conda env create -f environment.yml -p ./env
 
