@@ -6,6 +6,39 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 
+# 增加：自动识别 epoch 单位（s/ms/us/ns）的解析函数，兼容混合单位
+def _parse_epoch_mixed(series: pd.Series) -> pd.Series:
+    # 清洗并转换为数值
+    s_str = series.astype(str).str.strip()
+    s_num = pd.to_numeric(s_str, errors='coerce')
+    lengths = s_str.str.len()
+    # 预分配结果
+    dt = pd.Series(pd.NaT, index=series.index, dtype='datetime64[ns]')
+    # 19位及以上 → 纳秒 ns
+    mask_ns = (lengths >= 19) & s_num.notna()
+    if mask_ns.any():
+        dt.loc[mask_ns] = pd.to_datetime(s_num.loc[mask_ns], unit='ns', errors='coerce')
+    # 15-16位 → 微秒 us（常见：2025年数据如为微秒级）
+    mask_us = (lengths.isin([15, 16])) & s_num.notna()
+    if mask_us.any():
+        dt.loc[mask_us] = pd.to_datetime(s_num.loc[mask_us], unit='us', errors='coerce')
+    # 12-13位 → 毫秒 ms（常见历史数据）
+    mask_ms = (lengths.isin([12, 13])) & s_num.notna()
+    if mask_ms.any():
+        dt.loc[mask_ms] = pd.to_datetime(s_num.loc[mask_ms], unit='ms', errors='coerce')
+    # <=10位 → 秒 s
+    mask_s = (lengths <= 10) & s_num.notna()
+    if mask_s.any():
+        dt.loc[mask_s] = pd.to_datetime(s_num.loc[mask_s], unit='s', errors='coerce')
+    # 兜底：若仍有 NaT，尝试直接解析为字符串日期
+    remain = dt.isna()
+    if remain.any():
+        try:
+            dt.loc[remain] = pd.to_datetime(s_str.loc[remain], errors='coerce')
+        except Exception:
+            pass
+    return dt
+
 def load_data(start_month:str,end_month:str) -> pd.DataFrame:
     start_month = datetime.strptime(start_month, '%Y-%m')
     end_month = datetime.strptime(end_month, '%Y-%m')
@@ -43,9 +76,9 @@ def load_data(start_month:str,end_month:str) -> pd.DataFrame:
     print(f"合并后的数据形状: {z.shape}")
     print(f"合并后的列名: {z.columns.tolist()}")
 
-    # 处理时间戳,变成年月日-时分秒格式
-    z['open_time'] = pd.to_datetime(z['open_time'], unit='ms').dt.strftime('%Y-%m-%d %H:%M:%S')
-    z['close_time'] = pd.to_datetime(z['close_time'], unit='ms').dt.strftime('%Y-%m-%d %H:%M:%S')
+    # 处理时间戳：自动识别 s/ms/us/ns，直接保留为 datetime64[ns]
+    z['open_time'] = _parse_epoch_mixed(z['open_time'])
+    z['close_time'] = _parse_epoch_mixed(z['close_time'])
 
     return z
 
