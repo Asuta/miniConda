@@ -6,37 +6,44 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 
-# 增加：自动识别 epoch 单位（s/ms/us/ns）的解析函数，兼容混合单位
+"""
+将可能混合单位（秒/毫秒/微秒/纳秒）的 epoch 时间戳统一归一到毫秒，再安全解析为 datetime。
+避免按字符串长度判断造成的单位误判，防止 OutOfBoundsDatetime。
+"""
 def _parse_epoch_mixed(series: pd.Series) -> pd.Series:
-    # 清洗并转换为数值
-    s_str = series.astype(str).str.strip()
-    s_num = pd.to_numeric(s_str, errors='coerce')
-    lengths = s_str.str.len()
-    # 预分配结果
-    dt = pd.Series(pd.NaT, index=series.index, dtype='datetime64[ns]')
-    # 19位及以上 → 纳秒 ns
-    mask_ns = (lengths >= 19) & s_num.notna()
+    s_raw_str = series.astype(str).str.strip()
+    s_num = pd.to_numeric(s_raw_str, errors='coerce')
+
+    # 统一到毫秒级别
+    s_ms = pd.Series(np.nan, index=series.index, dtype='float64')
+    # ns: >= 1e18（1970-01-01 之后，以纳秒为单位）
+    mask_ns = s_num >= 1e18
     if mask_ns.any():
-        dt.loc[mask_ns] = pd.to_datetime(s_num.loc[mask_ns], unit='ns', errors='coerce')
-    # 15-16位 → 微秒 us（常见：2025年数据如为微秒级）
-    mask_us = (lengths.isin([15, 16])) & s_num.notna()
+        s_ms.loc[mask_ns] = s_num.loc[mask_ns] / 1e6
+    # us: [1e15, 1e18)
+    mask_us = (s_num >= 1e15) & (s_num < 1e18)
     if mask_us.any():
-        dt.loc[mask_us] = pd.to_datetime(s_num.loc[mask_us], unit='us', errors='coerce')
-    # 12-13位 → 毫秒 ms（常见历史数据）
-    mask_ms = (lengths.isin([12, 13])) & s_num.notna()
+        s_ms.loc[mask_us] = s_num.loc[mask_us] / 1e3
+    # ms: [1e12, 1e15)
+    mask_ms = (s_num >= 1e12) & (s_num < 1e15)
     if mask_ms.any():
-        dt.loc[mask_ms] = pd.to_datetime(s_num.loc[mask_ms], unit='ms', errors='coerce')
-    # <=10位 → 秒 s
-    mask_s = (lengths <= 10) & s_num.notna()
+        s_ms.loc[mask_ms] = s_num.loc[mask_ms]
+    # s: valid seconds（< 1e12）
+    mask_s = (s_num.notna()) & (s_num < 1e12)
     if mask_s.any():
-        dt.loc[mask_s] = pd.to_datetime(s_num.loc[mask_s], unit='s', errors='coerce')
-    # 兜底：若仍有 NaT，尝试直接解析为字符串日期
+        s_ms.loc[mask_s] = s_num.loc[mask_s] * 1e3
+
+    # 先按毫秒安全转换；再对非数值或仍为 NaN 的尝试字符串解析
+    # 使用四舍五入并转为 Pandas 可空整数，避免浮点误差
+    s_ms_int = pd.Series(pd.NA, index=series.index, dtype='Int64')
+    s_ms_int.loc[~pd.isna(s_ms)] = np.round(s_ms.loc[~pd.isna(s_ms)]).astype('int64')
+    dt = pd.to_datetime(s_ms_int, unit='ms', errors='coerce')
+
+    # 兜底：若仍有 NaT，尝试当作可读日期字符串解析
     remain = dt.isna()
     if remain.any():
-        try:
-            dt.loc[remain] = pd.to_datetime(s_str.loc[remain], errors='coerce')
-        except Exception:
-            pass
+        dt.loc[remain] = pd.to_datetime(s_raw_str.loc[remain], errors='coerce')
+
     return dt
 
 def load_data(start_month:str,end_month:str) -> pd.DataFrame:
