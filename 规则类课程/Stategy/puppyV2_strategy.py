@@ -21,7 +21,7 @@ def preprocess_data(
     z["flag"] = 0.0
     return z
 
-def preprocess_data_v2(
+def preprocess_data(
     z_: pd.DataFrame,
     ret_periods: int = 24,
     vol_window: int = 24,
@@ -53,12 +53,12 @@ def preprocess_data_v2(
     z["hh"] = (
         z["high"].rolling(breakout_lookback).max().shift(1)
     )  # 上一根之前 N 小时最高
-    # 初始化列（与 V1 并存，使用带 _v2 后缀）
-    z["position_v2"] = 0.0
-    z["flag_v2"] = 0.0
+    # 初始化列（与 V1 保持一致）
+    z["position"] = 0.0
+    z["flag"] = 0.0
     return z
 
-def run_strategy_v2(
+def run_strategy(
     z: pd.DataFrame,
     z_long: float = 0.8,  # 入场信号强度阈值（z-score）
     k_init: float = 2.0,  # 初始 ATR 止损倍数
@@ -104,16 +104,16 @@ def run_strategy_v2(
         if use_adx:
             regime_up = regime_up and (z["adx"].iloc[i] >= adx_min)
         # 默认沿用上一根仓位
-        prev_pos = z["position_v2"].iloc[i - 1]
-        z.at[idx, "position_v2"] = prev_pos
+        prev_pos = z["position"].iloc[i - 1]
+        z.at[idx, "position"] = prev_pos
         # 尝试开仓
         if (not in_pos) and (i - last_exit_i >= cool_down_hours):
             cond_signal = z["signal_z"].iloc[i] > z_long
             cond_breakout = close > z["hh"].iloc[i]
             if regime_up and cond_signal and cond_breakout:
                 in_pos = True
-                z.at[idx, "flag_v2"] = 1
-                z.at[idx, "position_v2"] = 1
+                z.at[idx, "flag"] = 1
+                z.at[idx, "position"] = 1
                 entry_price = close
                 entry_i = i
                 highest_high = high
@@ -147,8 +147,8 @@ def run_strategy_v2(
             time_stop = (i - entry_i) >= time_stop_hours
             if hit_stop or time_stop or trend_invalid:
                 in_pos = False
-                z.at[idx, "flag_v2"] = -1
-                z.at[idx, "position_v2"] = 0
+                z.at[idx, "flag"] = -1
+                z.at[idx, "position"] = 0
                 price_out = close
                 reason = (
                     "止损" if hit_stop else ("时间止损" if time_stop else "趋势失效")
@@ -167,13 +167,12 @@ def run_strategy_v2(
     transaction = pd.concat([p1, p2], axis=1)
     # 净值（V2）
     z["ret"] = z["close"].pct_change().fillna(0)
-    effective_position = z["position_v2"].shift(1).fillna(0)
-    z["nav_v2"] = (1 + z["ret"] * effective_position).cumprod()
-    z["nav"] = z["nav_v2"]  # 兼容性：让 nav 指向 nav_v2
+    effective_position = z["position"].shift(1).fillna(0)
+    z["nav"] = (1 + z["ret"] * effective_position).cumprod()
     z["benchmark"] = z["close"] / z["close"].iloc[0]
     return z, transaction
 
 def execute_strategy(z: pd.DataFrame) -> tuple:
-    z = preprocess_data_v2(z)
-    data_price, transaction = run_strategy_v2(z)
+    z = preprocess_data(z)
+    data_price, transaction = run_strategy(z)
     return data_price, transaction
