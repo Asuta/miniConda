@@ -1,6 +1,0 @@
-datetime,contract,symbol,exchange,open,high,low,close,volume,money,open_interest,high_limit,low_limit,close_MACD,close_MACD_Signal,close_MACD_Hist,close_MACD_Hist_status,close_MA_5,close_change_rate,close_change_rate_r_zscore_5,close_change_rate_r_zscore_10,close_change_rate_r_zscore_22,close_change_rate_r_zscore_126,close_r_percentile_5,close_r_percentile_10,close_r_percentile_22,close_r_percentile_126,contract_size,vwap
-2025-07-21,PL8888.CZCE,PL8888,CZCE,,,,,,,,,,,,,Normal,,,,,,,,,,,,
-2025-07-22,PL8888.CZCE,PL8888,CZCE,,,,,,,,,,,,,Normal,,,,,,,,,,,,
-2025-07-23,PL8888.CZCE,PL8888,CZCE,6606.256,6664.556,6551.438,6586.032,21862.0,2884254460,8683.0,7067.92,6142.618,,,,Normal,,,,,,,0.25,0.25,0.25,0.25,,
-2025-07-24,PL8888.CZCE,PL8888,CZCE,6600.057,6630.325,6576.302,6613.817,7634.0,1006351280,8112.0,7063.878,6138.764,,,,Normal,,0.004218776950977462605708566,,,,,0.4,0.4,0.4,0.4,,
-2025-07-25,PL8888.CZCE,PL8888,CZCE,6640.989,6696.507,6612.203,6661.669,9929.0,1319272920,7812.0,7065.279,6139.76,,,,Normal,,0.007235156340128552090267995,,,,,0.5,0.5,0.5,0.5,,
