@@ -108,9 +108,40 @@ def resample_data(z:pd.DataFrame,freq:str) -> pd.DataFrame:
     return z
 
 
+def clean_data(z: pd.DataFrame) -> pd.DataFrame:
+    """
+    使用前向填充（forward-fill）方法清洗数据中的NaN值。
+    注意：如果数据开头的行存在NaN，'ffill'无法填充它们。
+    
+    Args:
+        z (pd.DataFrame): 输入的DataFrame，可能包含NaN值。
+
+    Returns:
+        pd.DataFrame: 已填充NaN值后的DataFrame。
+    """
+    print("\n开始数据清洗：对NaN值进行前向填充...")
+    nan_before = z.isnull().sum().sum()
+    if nan_before == 0:
+        print("数据中无NaN值，无需清洗。")
+        return z
+    
+    z_cleaned = z.fillna(method='ffill')
+    nan_after = z_cleaned.isnull().sum().sum()
+    
+    print(f"清洗前NaN值总数: {nan_before}")
+    print(f"清洗后NaN值总数: {nan_after}")
+    if nan_after > 0:
+        print(f"警告：清洗后仍有 {nan_after} 个NaN值。这可能是因为数据开头的行包含NaN。")
+        
+    return z_cleaned
+
+
 if __name__ == '__main__':
     start_month = '2023-01'
     end_month = '2024-09'
     freq = '5min'
     z = load_data(start_month,end_month)
     z = resample_data(z,freq)
+    z = clean_data(z)
+    print("\n数据清洗完成，预览处理后的数据：")
+    print(z.head())
