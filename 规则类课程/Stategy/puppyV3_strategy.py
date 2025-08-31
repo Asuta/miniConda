@@ -57,6 +57,7 @@ def run_strategy(
     # 【修改点】增加开关，决定是否启用突破和动能条件
     require_breakout: bool = False, # 开关：是否要求突破前期高点 (改为False，极大放宽条件)
     require_momentum: bool = False, # 开关：是否要求动能强度 (改为False, 极大放宽条件)
+    commission_rate: float = 0.0005, # 新增：手续费率
 ) -> tuple:
     """
     V3 宽松版做多策略：
@@ -160,10 +161,17 @@ def run_strategy(
     p2 = pd.DataFrame(Sell, columns=["卖出日期", "卖出价格", "备注"])
     transaction_v3 = pd.concat([p1.reset_index(drop=True), p2.reset_index(drop=True)], axis=1)
     
-    # 计算净值曲线 (保持不变)
+    # 计算净值曲线 (考虑手续费)
     z["ret"] = z["close"].pct_change().fillna(0)
     effective_position = z["position"].shift(1).fillna(0)
-    z["nav"] = (1 + z["ret"] * effective_position).cumprod()
+    
+    # 计算换手率：仓位变化 / 2 (买卖各一次)
+    turnover = abs(effective_position - effective_position.shift(1).fillna(0))
+    commission_cost = turnover * commission_rate
+    
+    # 计算策略收益时减去手续费
+    strategy_ret = z["ret"] * effective_position - commission_cost
+    z["nav"] = (1 + strategy_ret).cumprod()
     z["benchmark"] = z["close"] / z["close"].iloc[0]
     
     return z, transaction_v3
